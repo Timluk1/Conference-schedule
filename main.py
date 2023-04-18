@@ -6,25 +6,19 @@ ends = {}
 
 class Report:
     def __init__(self, name, conference, start, end):
-        year_start, mouth_start, day_start, hour_start, minutes_start = map(int, start.split(":"))
-        year_end, mouth_end, day_end, hour_end, minutes_end = map(int, end.split(":"))
         self.conference = conference
-        self.time_start = dt.datetime(year_start, mouth_start, day_start, hour_start, minutes_start)
-        self.time_end = dt.datetime(year_end, mouth_end, day_end, hour_end, minutes_end)
+        self.time_start = dt.datetime.strptime(start, "%Y:%m:%d,%H:%M")
+        self.time_end = dt.datetime.strptime(end, "%Y:%m:%d,%H:%M")
         self.name = name
         data[conference].append(self)
 
     def check_report_overlap(self, new_report):
-        return (self.time_start <= new_report.time_start <= self.time_end) or \
-               (self.time_start <= new_report.time_end <= self.time_end) or \
-               (new_report.time_start <= self.time_start <= new_report.time_end) or \
-               (new_report.time_start <= self.time_end <= new_report.time_end)
+        return (self.time_start <= new_report.time_start <= self.time_end) and \
+               (self.time_start <= new_report.time_end <= self.time_end)
 
-    def check_report_overlap2(self, new_report):
-        return (self.conference.start <= new_report.time_start <= self.conference.end) or \
-               (self.conference.start <= new_report.time_end <= self.conference.end) or \
-               (new_report.time_start <= self.conference.start <= new_report.time_end) or \
-               (new_report.time_start <= self.conference.end <= new_report.time_end)
+    def check_report_overlap2(self, conference):
+        return (conference.start <= self.time_start <= conference.end) and \
+               (conference.start <= self.time_end <= conference.end)
 
     def time(self):
         return self.time_end - self.time_start
@@ -33,11 +27,9 @@ class Report:
 class Conference:
     def __init__(self, name, start, end, topic):
         global data
-        year_start, mouth_start, day_start, hour_start, minutes_start = map(int, start.split(":"))
-        year_end, mouth_end, day_end, hour_end, minutes_end = map(int, end.split(":"))
         self.name = name
-        self.start = dt.datetime(year_start, mouth_start, day_start, hour_start, minutes_start)
-        self.end = dt.datetime(year_end, mouth_end, day_end, hour_end, minutes_end)
+        self.start = dt.datetime.strptime(start, "%Y:%m:%d,%H:%M")
+        self.end = dt.datetime.strptime(end, "%Y:%m:%d,%H:%M")
         self.topic = topic
         data[self] = []
 
@@ -54,7 +46,10 @@ class Conference:
     def max_break(self):
         global data
         data2 = sorted(data[self], key=lambda x: x.time_end)
-        return max([data2[i + 1].time_start - data2[i].time_end for i in range(len(data2) - 1)])
+        max_break_duration = max([data2[i + 1].time_start - data2[i].time_end for i in range(len(data2) - 1)])
+        max_break_duration_str = str(max_break_duration.days) + " days, " + str(
+            max_break_duration.seconds // 3600) + " hours, " + str((max_break_duration.seconds // 60) % 60) + " minutes"
+        return max_break_duration_str
 
 
 def delete_end_conferences():
@@ -66,12 +61,10 @@ def delete_end_conferences():
             new[i] = data[i]
         else:
             ends[i] = data[i]
-
     data = new
 
 
 def main():
-    '''Функция для админа'''
     while True:
         print("Здравствуйте, вы можете создать конференцию и загрузить доклады по конференции.")
         print(
@@ -79,20 +72,20 @@ def main():
             " в конференцию\nВремя самого продолжительного перерыва между докладами\nВыйти")
         answer = input("Введите команду: ")
         if "добавить конференцию" in answer.lower():
-            name_conference = input("Введите название концереции: ")
-            topic_conference = input("Введите тему концеренции")
+            name_conference = input("Введите название конференции: ")
+            topic_conference = input("Введите тему конференции: ")
             start = input(
-                "Введите дату начала конференции, пример: 2024:12:02:10:01, формат (год, месяц, день, часы, минуты: ")
+                "Введите дату начала конференции, пример: 2024:12:02,10:0, формат (год, месяц, день, часы, минуты): ")
             end = input(
-                "Введите дату окончания конференции, пример: 2024:12:02:10:01, формат (год, месяц, день, часы, минуты: ")
-            conf = Conference(name_conference, start, end, topic_conference)
+                "Введите дату окончания конференции, пример: 2024:12:02,10:0, формат (год, месяц, день, часы, минуты): "
+            )
+            Conference(name_conference, start, end, topic_conference)
             print("Конференция добавлена!")
         elif "вывезти идущие конференции" in answer.lower():
             delete_end_conferences()
             if data == {}:
                 print()
                 print("Нет идущих конференций")
-                print()
             else:
                 for i in data:
                     print()
@@ -103,7 +96,6 @@ def main():
             if ends == {}:
                 print()
                 print("Нет прошедших конференций")
-                print()
             else:
                 for i in ends:
                     print()
@@ -125,38 +117,45 @@ def main():
                     break
             if flag:
                 start = input(
-                    "Введите дату начала доклада, пример: 2024:12:02:10:01, формат (год, месяц, день, часы, минуты: ")
+                    "Введите дату начала доклада, пример: 2024:12:02,10:0, формат (год, месяц, день, часы, минуты): ")
                 end = input(
-                    "Введите дату окончания доклада, пример: 2024:12:02:10:01, формат (год, месяц, день, часы, минуты: ")
+                    "Введите дату окончания доклада, пример: 2024:12:02,10:0, формат (год, месяц, день, часы, минуты): ")
                 name = input("Введите название доклада: ")
                 re = Report(name, c, start, end)
-                count = 0
                 flag = True
-                for i in data[c]:
-                    if i != re:
-                        if re.check_report_overlap(i):
-                            print(f"Дата перекрывает уже существуюущую дату {i.time_start, i.time_end}")
-                            del data[c][count]
-                            flag = False
-                            break
-                        if re.check_report_overlap2(i):
-                            print("Дата выходит за пределы конференции")
-                            del data[c][count]
-                            flag = False
-                            break
-                    count += 1
+                if not re.check_report_overlap2(c):
+                    print("Дата выходит за пределы конференции")
+                    del data[c][data[c].index(re)]
+                    flag = False
+                if len(data[c]) != 1:
+                    for i in data[c]:
+                        if i != re:
+                            if i.check_report_overlap(re):
+                                print(
+                                    f"Дата перекрывает уже существующую дату: {i.time_start.day} days,"
+                                    f"{i.time_start.strftime('%B %d, %Y')}, {i.time_start.strftime('%H:%M')}"
+                                    f"- {i.time_end.strftime('%B %d, %Y')}, {i.time_end.strftime('%H:%M')}")
+                                del data[c][data[c].index(re)]
+                                flag = False
+                                break
                 if flag:
                     print(f"Вы успешно добавили доклад:\nНазвание: {re.name}\nПродолжительность: {re.time()}")
             else:
                 print("Нет такой конференции")
         elif "время самого продолжительного перерыва между докладами" in answer.lower():
             name = input("Введите название конференции: ")
+            flag = True
             for i in data:
                 if name == i.name:
                     print(i.max_break())
+                    flag = False
                     break
+            if flag:
+                print()
+                print("К сожалени нет такой конференции")
         elif "выйти" in answer.lower():
             break
+        print()
 
 
 if __name__ == "__main__":
