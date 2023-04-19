@@ -51,6 +51,9 @@ class Conference:
             max_break_duration.seconds // 3600) + " hours, " + str((max_break_duration.seconds // 60) % 60) + " minutes"
         return max_break_duration_str
 
+    def reports(self):
+        return data[self]
+
 
 def delete_end_conferences():
     global data, ends
@@ -69,7 +72,8 @@ def main():
         print("Здравствуйте, вы можете создать конференцию и загрузить доклады по конференции.")
         print(
             "Команды:\nВывезти прошедшие конференции\nВывезти идущие конференции\nДобавить конференцию\nДобавить доклад"
-            " в конференцию\nВремя самого продолжительного перерыва между докладами\nВыйти")
+            " в конференцию\nВремя самого продолжительного перерыва между докладами\nВывезти доклады конференции\nВыйти"
+        )
         answer = input("Введите команду: ")
         if "добавить конференцию" in answer.lower():
             name_conference = input("Введите название конференции: ")
@@ -132,7 +136,7 @@ def main():
                         if i != re:
                             if i.check_report_overlap(re):
                                 print(
-                                    f"Дата перекрывает уже существующую дату: {i.time_start.day} days,"
+                                    f"Дата перекрывает уже существующую дату: "
                                     f"{i.time_start.strftime('%B %d, %Y')}, {i.time_start.strftime('%H:%M')}"
                                     f"- {i.time_end.strftime('%B %d, %Y')}, {i.time_end.strftime('%H:%M')}")
                                 del data[c][data[c].index(re)]
@@ -153,9 +157,26 @@ def main():
             if flag:
                 print()
                 print("К сожалени нет такой конференции")
+        elif "Вывезти доклады конференции":
+            name_conference = input("Введите название конференции: ")
+            print("Доступные конференции: ")
+            for i in data:
+                print()
+                i.active_confernces()
+            print()
+            conf = [i for i in data if i.name == name_conference]
+            if len(conf) != 0:
+                r = conf[0].reports()[0]
+                duration = r.time()
+                print(
+                    f"Название: {name}"
+                    f"Начало: {r.time_start.strftime('%B %d, %Y')}, {r.time_start.strftime('%H:%M')}\n"
+                    f"Конец: {r.time_end.strftime('%B %d, %Y')}, {r.time_end.strftime('%H:%M')}\n"
+                    f"Продолжительность: {str(duration.days)} days, {str(duration.seconds // 3600)} hours,"
+                    f"{str((duration.seconds // 60) % 60)} minutes"
+                )
         elif "выйти" in answer.lower():
             break
-        print()
 
 
 if __name__ == "__main__":
